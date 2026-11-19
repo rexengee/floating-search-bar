@@ -1,9 +1,14 @@
-const NEW_TAB_PATTERN = /^(?:(?:chrome|helium|edge|brave|vivaldi):\/\/newtab\/?|chrome-search:\/\/local-ntp\/?|about:blank)$/i;
+const NEW_TAB_PATTERN =
+  /^(?:(?:chrome|helium|edge|brave|vivaldi):\/\/new-?tab(?:-page)?\/?|chrome-search:\/\/local-ntp\/?|about:(?:blank|newtab))$/i;
 
 function isNewTab(tab) {
   const url = (tab?.url || tab?.pendingUrl || "").trim();
   if (!url) return false;
   return NEW_TAB_PATTERN.test(url);
+}
+
+function isInjectableUrl(url) {
+  return /^(?:https?|file):\/\//i.test(url || "");
 }
 
 function normalizeTargetUrl(raw) {
@@ -23,6 +28,20 @@ function normalizeTargetUrl(raw) {
   }
 
   return null;
+}
+
+async function focusOrCreateNewTab(currentTab) {
+  if (isNewTab(currentTab)) return;
+
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const existingNewTab = tabs.find((t) => typeof t.id === "number" && isNewTab(t));
+
+  if (existingNewTab) {
+    await chrome.tabs.update(existingNewTab.id, { active: true });
+    return;
+  }
+
+  await chrome.tabs.create({ active: true });
 }
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -56,11 +75,27 @@ chrome.commands.onCommand.addListener(async (command) => {
     return;
   }
 
+  if (isNewTab(tab)) return;
+
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: "FLOATING_SEARCH_BAR_TOGGLE" });
+    const res = await chrome.tabs.sendMessage(tab.id, { type: "FLOATING_SEARCH_BAR_TOGGLE" });
+    if (res?.ok) return;
   } catch {
-    // Zaten boş bir yeni sekmedeysen tekrar yeni sekme açma
-    if (isNewTab(tab)) return;
-    await chrome.tabs.create({ active: true });
+    // Sekmede content.js henüz yüklü değilse aşağıda enjeksiyon denenir
   }
+
+  if (isInjectableUrl(tab.url)) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"]
+      });
+      const res = await chrome.tabs.sendMessage(tab.id, { type: "FLOATING_SEARCH_BAR_TOGGLE" });
+      if (res?.ok) return;
+    } catch {
+      // Mağaza sayfası gibi enjeksiyona kapalı https sayfalarında yeni sekme yedeğine geç
+    }
+  }
+
+  await focusOrCreateNewTab(tab);
 });

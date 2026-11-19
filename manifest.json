@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Floating Search Bar",
-  "version": "1.1.1",
-  "description": "Opens a centered floating search bar inside the active tab on Ctrl+T and opens searches or URLs in a new tab.",
-  "permissions": ["search", "tabs"],
+  "version": "1.1.2",
+  "description": "Opens a centered floating search bar inside the active tab and switches to or opens a new tab on restricted pages.",
+  "permissions": ["search", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
   "commands": {
     "toggle-search-bar": {
-      "description": "Toggle Floating Search Bar (opens a new tab on restricted pages)"
+      "description": "Toggle Floating Search Bar (switches to or opens a new tab on restricted pages)"
     }
   },
   "content_scripts": [

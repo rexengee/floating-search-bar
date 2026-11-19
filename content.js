@@ -1,4 +1,7 @@
 (() => {
+  if (window.__FLOATING_SEARCH_BAR_LOADED__) return;
+  window.__FLOATING_SEARCH_BAR_LOADED__ = true;
+
   const HOST_ID = "floating-search-bar-host";
   let isOpen = false;
   let hostEl = null;
@@ -159,12 +162,6 @@
             submitSearch();
             return;
           }
-          if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyT") {
-            e.preventDefault();
-            e.stopPropagation();
-            closeSearch();
-            return;
-          }
         }
         e.stopPropagation();
       });
@@ -210,20 +207,17 @@
     }
   }
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message && message.type === "FLOATING_SEARCH_BAR_TOGGLE") {
       toggleSearch();
+      sendResponse({ ok: true });
     }
   });
 
   window.addEventListener(
     "keydown",
     (e) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyT") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        toggleSearch();
-      } else if (isOpen && e.key === "Escape") {
+      if (isOpen && e.key === "Escape") {
         e.preventDefault();
         e.stopImmediatePropagation();
         closeSearch();
