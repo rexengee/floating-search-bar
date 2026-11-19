@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Floating Search Bar",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Opens a centered floating search bar inside the active tab on Ctrl+T and opens searches or URLs in a new tab.",
-  "permissions": ["search"],
+  "permissions": ["search", "tabs"],
   "background": {
     "service_worker": "background.js"
   },

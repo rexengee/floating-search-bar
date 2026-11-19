@@ -1,3 +1,11 @@
+const NEW_TAB_PATTERN = /^(?:(?:chrome|helium|edge|brave|vivaldi):\/\/newtab\/?|chrome-search:\/\/local-ntp\/?|about:blank)$/i;
+
+function isNewTab(tab) {
+  const url = (tab?.url || tab?.pendingUrl || "").trim();
+  if (!url) return false;
+  return NEW_TAB_PATTERN.test(url);
+}
+
 function normalizeTargetUrl(raw) {
   const input = raw.trim();
   if (!input) return null;
@@ -42,16 +50,17 @@ chrome.runtime.onMessage.addListener((message) => {
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "toggle-search-bar") return;
 
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab || typeof tab.id !== "number") {
-      await chrome.tabs.create({ active: true });
-      return;
-    }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || typeof tab.id !== "number") {
+    await chrome.tabs.create({ active: true });
+    return;
+  }
 
+  try {
     await chrome.tabs.sendMessage(tab.id, { type: "FLOATING_SEARCH_BAR_TOGGLE" });
   } catch {
-    // chrome://extensions gibi korumalı sayfalarda content script çalışmadığı için yeni sekme açar
+    // Zaten boş bir yeni sekmedeysen tekrar yeni sekme açma
+    if (isNewTab(tab)) return;
     await chrome.tabs.create({ active: true });
   }
 });
