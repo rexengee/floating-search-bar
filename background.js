@@ -38,3 +38,20 @@ chrome.runtime.onMessage.addListener((message) => {
     });
   }
 });
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "toggle-search-bar") return;
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || typeof tab.id !== "number") {
+      await chrome.tabs.create({ active: true });
+      return;
+    }
+
+    await chrome.tabs.sendMessage(tab.id, { type: "FLOATING_SEARCH_BAR_TOGGLE" });
+  } catch {
+    // chrome://extensions gibi korumalı sayfalarda content script çalışmadığı için yeni sekme açar
+    await chrome.tabs.create({ active: true });
+  }
+});
